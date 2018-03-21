@@ -88,7 +88,7 @@
 #+BEGIN_SRC emacs-lisp
 (add-hook 'emacs-lisp-mode-hook 'remove-elc-on-save)
 #+END_SRC
-* COMMENT General.el Config
+* General.el Config
 General is required above any packages using the :general keyword
 #+BEGIN_SRC emacs-lisp
   (defun reload-config ()
@@ -209,7 +209,7 @@ General is required above any packages using the :general keyword
   (beacon-mode 1))
 #+END_SRC
 
-* COMMENT Ivy
+* Ivy
 #+BEGIN_SRC emacs-lisp
   (use-package ivy
     :ensure t
