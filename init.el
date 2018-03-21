@@ -47,7 +47,7 @@
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-    (org-bullets evil-smartparens treemacs-evil seq-2\.14 which-key use-package spaceline solarized-theme mode-icons general flycheck evil-nerd-commenter evil-escape diminish counsel company))))
+    (rjsx-mode company-tern anaconda-mode org-bullets evil-smartparens treemacs-evil seq-2\.14 which-key use-package spaceline solarized-theme mode-icons general flycheck evil-nerd-commenter evil-escape diminish counsel company))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

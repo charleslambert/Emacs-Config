@@ -4,10 +4,11 @@
 * Basic Settings
 ** Settings for backup and autosave files
 #+BEGIN_SRC emacs-lisp
-(setq backup-directory-alist
-      `((".*" . ,temporary-file-directory)))
-(setq auto-save-file-name-transforms
-      `((".*" ,temporary-file-directory t)))
+  ;;; -*- lexical-binding: t -*-
+  (setq backup-directory-alist
+        `((".*" . ,temporary-file-directory)))
+  (setq auto-save-file-name-transforms
+        `((".*" ,temporary-file-directory t)))
 #+END_SRC
 
 ** Remove byte compile warnings
@@ -64,19 +65,19 @@
 
 * Functions
 #+BEGIN_SRC emacs-lisp
-(defun byte-compile-init-dir ()
-  "Byte-compile all your dotfiles."
-  (interactive)
-  (byte-recompile-directory user-emacs-directory 0))
+  (defun byte-compile-init-dir ()
+    "Byte-compile all your dotfiles."
+    (interactive)
+    (byte-recompile-directory user-emacs-directory 0))
 
-(defun remove-elc-on-save ()
-  "If you're saving an elisp file, likely the .elc is no longer valid."
-  (add-hook 'after-save-hook
-            (lambda ()
-              (if (file-exists-p (concat buffer-file-name "c"))
-                  (delete-file (concat buffer-file-name "c"))))
-            nil
-            t))
+  (defun remove-elc-on-save ()
+    "If you're saving an elisp file, likely the .elc is no longer valid."
+    (add-hook 'after-save-hook
+              (lambda ()
+                (if (file-exists-p (concat buffer-file-name "c"))
+                    (delete-file (concat buffer-file-name "c"))))
+              nil
+              t))
 
 #+END_SRC
 * Definitions
@@ -94,14 +95,21 @@ General is required above any packages using the :general keyword
     (interactive)
     (load-file "~/.emacs.d/init.el"))
 
+  (defun edit-config ()
+    (interactive)
+    (find-file-at-point "~/.emacs.d/config.org"))
+
   (use-package general
     :ensure t
     :config
     (general-define-key
-     :keymaps my-global-keymaps
-     "SPC" '(:prefix-command my-prefix :wk "prefix")
+     :states '(normal visual insert motion emacs treemacs)
+     :keymaps  'global-map
      :prefix "SPC"
      :non-normal-prefix "C-TAB"
+     ;; "SPC" '(:prefix-command my-prefix :wk "prefix")
+
+     ;; M-x
      "SPC" '(counsel-M-x :wk "M-x")
 
      ;; Window Keybindings
@@ -127,7 +135,10 @@ General is required above any packages using the :general keyword
      "ff" '(counsel-find-file :wk "find file")
      "fr" '(counsel-recentf :wk "find recent file")
      "ft" '(treemacs-toggle :wk "file tree")
+     "fs" '(save-buffer :wk "save file")
+     "fe" '(:ignore t :wk "emacs")
      "feR" '(reload-config :wk "reload config")
+     "fed" '(edit-config :wk "edit config")
 
      ;; Applications
      "a" '(:ignore t :wk "applications")
@@ -158,11 +169,14 @@ General is required above any packages using the :general keyword
 
 ** Escape
 #+BEGIN_SRC emacs-lisp
-(use-package evil-escape
-  :ensure t
-  :diminish evil-escape-mode
-  :config
-  (evil-escape-mode))
+  (use-package evil-escape
+    :ensure t
+    :diminish evil-escape-mode
+    :config
+    (evil-escape-mode))
+    ;; :general
+    ;; (:keymaps 'global
+    ;;           "ESC" 'evil-escape))
 #+END_SRC
 
 ** Smartpaerns
@@ -180,7 +194,9 @@ General is required above any packages using the :general keyword
   :ensure t
   :commands (global-flycheck-mode)
   :init
+  (setq-default flycheck-disabled-checkers '())
   (add-hook 'after-init-hook #'global-flycheck-mode)
+
   )
 #+END_SRC
 
@@ -193,30 +209,21 @@ General is required above any packages using the :general keyword
   (beacon-mode 1))
 #+END_SRC
 
-* Ivy
+* COMMENT Ivy
 #+BEGIN_SRC emacs-lisp
   (use-package ivy
     :ensure t
     :diminish ivy-mode ; does not display ivy in the modeline
     :init (ivy-mode 1)        ; enable ivy globally at startup
     :config
-    ;; (define-key ivy-minibuffer-map (kbd "C-j") 'ivy-next-line)
-    ;; (define-key ivy-minibuffer-map (kbd "C-k") 'ivy-previous-line)
+    (setq ivy-count-format "(%d/%d) ") ; count format, from the ivy help page
 
     (setq ivy-use-virtual-buffers t)   ; extend searching to bookmarks and …
     (setq ivy-height 20)               ; set height of the ivy window
     :general
     (:keymaps 'ivy-minibuffer-map
               "C-j" 'ivy-next-line
-              "C-k" 'ivy-previous-line
-              )
-    ;; (setq ivy-count-format "(%d/%d) ") ; count format, from the ivy help page
-    ;; :general
-    ;; (:keymaps '(my-prefix normal)
-    ;;           ;; :prefix 'my-prefix
-    ;;           ;; :non-normal-prefix "C-TAB"
-    ;; :prefix "SPC"
-    ;; "m" 'ivy-switch-buffer)
+              "C-k" 'ivy-previous-line)
     )
 #+END_SRC
 
@@ -240,7 +247,7 @@ General is required above any packages using the :general keyword
   (which-key-mode))
 #+END_SRC
 
-* Modeline 
+* Modeline
 ** Icons
 #+BEGIN_SRC emacs-lisp
 (use-package mode-icons
@@ -286,9 +293,75 @@ General is required above any packages using the :general keyword
     :after treemacs)
 #+END_SRC
 * Org
-# #+BEGIN_SRC emacs-lisp
-#   (use-package org-bullets
-#   :ensure t
-#   :hook (org-mode . (org-bullets-mode 1))
+#+BEGIN_SRC emacs-lisp
+  (use-package org
+    :ensure t
+    :config
+    (setq org-log-done t)
+    (setq org-agenda-files (list "~/org/work.org"
+                               "~/org/school.org"
+                               "~/org/home.org"))
+    )
 
-# #+END_SRC
+  (use-package org-bullets
+  :ensure t
+  :hook (org-mode . org-bullets-mode))
+
+#+END_SRC
+* Languages
+** Python
+#+BEGIN_SRC emacs-lisp
+   (use-package company-anaconda
+    :ensure t
+    :after company
+    :config
+    (add-to-list 'company-backends 'company-anaconda)
+    )
+
+  (use-package anaconda-mode
+    :ensure t
+    :hook python-mode
+    :hook (python-mode . anaconda-eldoc-mode)
+    :general
+    (:states 'normal
+     :keymaps 'python-mode-map
+     :prefix "SPC"
+     "m" '(:ignore t :wk "python mode")
+     "me" '(:ignore t :wk "enviornment")
+     "mea" '(pythonic-activate :wk "activate enviornment"))
+    )
+#+END_SRC
+** Javascript-jsx
+*** Tern
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'exec-path "/home/charlie/.npm-global/bin")
+
+  (use-package tern
+    :ensure t
+    :mode ("\\.js" . tern-mode))
+
+  (use-package company-tern
+    :ensure t
+    :after company
+    :config
+    (add-to-list 'company-backends 'company-tern))
+#+END_SRC
+*** Rjsx
+#+BEGIN_SRC emacs-lisp
+  (use-package rjsx-mode
+    :ensure t
+    :mode ("\\.js" . rjsx-mode)
+    :config
+    )
+#+END_SRC
+
+*** Eslint
+#+BEGIN_SRC emacs-lisp
+  (setq-default flycheck-disabled-checkers
+    (append flycheck-disabled-checkers
+            '(javascript-jshint)))
+
+
+
+#+END_SRC
+* Testing
