@@ -1,0 +1,569 @@
+* startup
+#+BEGIN_SRC emacs-lisp
+
+
+  (setq gc-cons-threshold 400000000)
+
+  ;;; Begin initialization
+  ;; Turn off mouse interface early in startup to avoid momentary display
+
+  ;; (when window-system
+    (menu-bar-mode -1)
+    (tool-bar-mode -1)
+    (scroll-bar-mode -1)
+  (tooltip-mode -1)
+  ;; )
+
+  (setq inhibit-startup-message t)
+  (setq initial-scratch-message "")
+  (setq package-enable-at-startup nil) ; tells emacs not to load any packages before starting up
+
+  ;;; Set up package
+  (when (>= emacs-major-version 24)
+    (require 'package)
+    (setq package-archives '(("gnu" . "http://elpa.gnu.org/packages/")
+                             ("org"       . "http://orgmode.org/elpa/")
+                             ("melpa"     . "https://melpa.org/packages/")
+                             ("marmalade" . "http://marmalade-repo.org/packages/")
+                           )))
+  (package-initialize) ; guess what this one does ?
+
+  ;;; Bootstrap use-package
+  ;; Install use-package if it's not already installed.
+  ;; use-package is used to configure the rest of the packages.
+  (unless (package-installed-p 'use-package)
+    (package-refresh-contents)
+    (package-install 'use-package))
+
+  ;; From use-package README
+  (eval-when-compile
+    (require 'use-package))
+  (use-package diminish
+               :ensure t)
+#+END_SRC
+
+* Basic Settings
+** Settings for backup and autosave files
+#+BEGIN_SRC emacs-lisp
+  ;; -*- lexical-binding: t; -*-
+  (setq backup-directory-alist
+        `((".*" . ,temporary-file-directory)))
+  (setq auto-save-file-name-transforms
+        `((".*" ,temporary-file-directory t)))
+#+END_SRC
+
+** Remove byte compile warnings
+#+BEGIN_SRC emacs-lisp
+(setq byte-compile-warnings '(not nresolved
+                                  free-vars
+                                  callargs
+                                  redefine
+                                  obsolete
+                                  noruntime
+                                  cl-functions
+                                  interactive-only
+                                  ))
+#+END_SRC
+
+** Other settings
+# TODO: Need to sort throug these
+#+BEGIN_SRC emacs-lisp
+  (setq delete-old-versions -1 )          ; delete excess backup versions silently
+  (setq version-control t )               ; use version control
+  (setq vc-make-backup-files t )          ; make backups file even when in version controlled dir
+  (setq backup-directory-alist `(("." . "~/.emacs.d/backups")) ) ; which directory to put backups file
+  (setq vc-follow-symlinks t )                                   ; don't ask for confirmation when opening symlinked file
+  (setq auto-save-file-name-transforms '((".*" "~/.emacs.d/auto-save-list/" t)) ) ;transform backups file name
+  (setq inhibit-startup-screen t )        ; inhibit useless and old-school startup screen
+  (setq ring-bell-function 'ignore )      ; silent bell when you make a mistake
+  (setq coding-system-for-read 'utf-8 )   ; use utf-8 by default
+  (setq coding-system-for-write 'utf-8 )
+  (setq sentence-end-double-space nil)    ; sentence SHOULD end with only a point.
+  (setq fill-column 80)           ; toggle wrapping text at the 80th character
+  (setq initial-scratch-message "Hello Charlie. You can do the thing!")
+  (setq default-directory "~/")
+  (add-hook 'before-save-hook 'delete-trailing-whitespace)
+  (setq require-final-newline t)
+  (setq confirm-kill-emacs 'y-or-n-p)
+  (global-font-lock-mode t) ; Always have syntax highligting
+  (show-paren-mode t)
+  (setq show-paren-delay 0.0)
+  (setq initial-major-mode 'fundamental-mode)
+
+#+END_SRC
+
+* Fonts
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'default-frame-alist
+             '(font . "DejaVuSansMono Nerd Font-12"))
+#+END_SRC
+
+* Theme
+#+BEGIN_SRC emacs-lisp
+(use-package solarized-theme
+  :ensure t
+  :config
+  (load-theme 'solarized-dark t))
+#+END_SRC
+
+* Functions
+** Byte compiling
+#+BEGIN_SRC emacs-lisp
+  (defun byte-compile-init-dir ()
+    "Byte-compile all your dotfiles."
+    (interactive)
+    (byte-recompile-directory user-emacs-directory 0))
+
+  (defun remove-elc-on-save ()
+    "If you're saving an elisp file, likely the .elc is no longer valid."
+    (add-hook 'after-save-hook
+              (lambda ()
+                (if (file-exists-p (concat buffer-file-name "c"))
+                    (delete-file (concat buffer-file-name "c"))))
+              nil
+              t))
+
+  (defun my/tangle-dotfiles ()
+     "If the current file is this file, the code blocks are tangled"
+     (when (equal (buffer-file-name) (expand-file-name "~/.emacs.d/init.org"))
+       (org-babel-tangle nil "~/.emacs.d/init.el")
+       (byte-compile-file "~/.emacs.d/init.el")))
+
+  (add-hook 'after-save-hook #'my/tangle-dotfiles)
+#+END_SRC
+** Opening a terminal in a tameable way
+#+BEGIN_SRC emacs-lisp
+  (defun open-term ()
+    "Open a terminal."
+    (interactive)
+    (let ((term "*terminal*"))
+          (if (get-buffer term)
+              (if (get-buffer-window term)
+                  (delete-window (get-buffer-window term))
+                (display-buffer term))
+            (progn
+              (term "/bin/zsh")
+              (bury-buffer)
+              (display-buffer "*terminal*")))))
+
+#+END_SRC
+* Definitions
+#+BEGIN_SRC emacs-lisp
+(setq my-global-keymaps '(normal visual insert motion emacs treemacs))
+#+END_SRC
+* Settings for buffer control
+** Terminal
+Tame the term in the bottom of the screen. This requires another function as well.
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'display-buffer-alist
+               `(,"*terminal*"
+                 (display-buffer-reuse-window
+                  display-buffer-at-bottom)
+                 (window-height   . 0.3)))
+#+END_SRC
+* Modeline
+** Telephone line
+#+BEGIN_SRC emacs-lisp
+  (use-package telephone-line
+    :ensure t
+    :after evil
+    :config
+    (require 'telephone-line-config)
+    (setq telephone-line-primary-left-separator 'telephone-line-gradient
+    telephone-line-primary-right-separator 'telephone-line-gradient
+    telephone-line-secondary-left-separator 'telephone-line-gradient
+    telephone-line-secondary-right-separator 'telephone-line-gradient)
+    (setq telephone-line-height 24)
+    (setq telephone-line-lhs
+          '((evil   . (telephone-line-evil-tag-segment))
+            (accent . (telephone-line-vc-segment
+                       telephone-line-erc-modified-channels-segment
+                       telephone-line-process-segment))))
+            ;; (nil    . (telephone-line-buffer-segment))))
+    (dolist (x minor-mode-list) (diminish x))
+    (telephone-line-evil-config))
+#+END_SRC
+
+* Package upgrading
+#+BEGIN_SRC emacs-lisp
+(use-package spu
+  :ensure t
+  :defer 5 ;; defer package loading for 5 second
+  :config (spu-package-upgrade-daily))
+#+END_SRC
+* General Hooks
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'emacs-lisp-mode-hook 'remove-elc-on-save)
+#+END_SRC
+* General.el Config
+General is required above any packages using the :general keyword
+#+BEGIN_SRC emacs-lisp
+  (defun reload-config ()
+    (interactive)
+    (load-file "~/.emacs.d/init.elc"))
+
+  (defun edit-config ()
+    (interactive)
+    (find-file-at-point "~/.emacs.d/init.org"))
+
+  (use-package general
+    :ensure t
+    :config
+    (general-define-key
+     :states '(normal visual insert motion emacs treemacs)
+     :keymaps  'global-map :prefix "SPC"
+     :non-normal-prefix "C-TAB"
+     ;; "SPC" '(:prefix-command my-prefix :wk "prefix")
+
+     ;; M-x
+     "SPC" '(counsel-M-x :wk "M-x")
+
+     ;; Escape minibuffer if I mistakenly hit space
+     "ESC" '(keyboard-escape-quit :wk "escape")
+
+     ;; Window Keybindings
+     "w" '(:ignore t :wk "windows")
+     "wd" '(delete-window :wk "delete window")
+     "wl" '(windmove-right :wk "move window right")
+     "wh" '(windmove-left :wk "move window left")
+     "wk" '(windmove-up :wk "move window up")
+     "wj" '(windmove-down :wk "move window down")
+     "wv" '(split-window-right :wk "vertical split")
+     "ws" '(split-window-below :wk "horizontal split")
+     "wV" '(split-window-right-and-focus :wk "focus vertical split")
+     "wS" '(split-window-below-and-focus :wk "focus horizontal split")
+
+     ;; Buffer Keybindings
+     "b"  '(:ignore t :wk "buffer")
+     "bb" '(ivy-switch-buffer :wk "buffer list")
+     "bp" '(previous-buffer :wk "prev buffer")
+     "bn" '(next-buffer :wk "next buffer")
+
+
+     "f" '(:ignore t :wk "files")
+     "ff" '(counsel-find-file :wk "find file")
+     "fr" '(counsel-recentf :wk "find recent file")
+     "ft" '(treemacs-toggle :wk "file tree")
+     "fs" '(save-buffer :wk "save file")
+     "fe" '(:ignore t :wk "emacs")
+     "fer" '(reload-config :wk "reload config")
+     "fed" '(edit-config :wk "edit config")
+
+     ;; Applications
+     "a" '(:ignore t :wk "applications")
+     "ast" '(open-term :wk term)
+
+     ;; Help
+     "h" '(:ignore t :wk "help")
+     "hv" '(counsel-describe-variable :wk "describe variable")
+     )
+
+
+
+    (general-define-key
+     :prefix "g"
+     :keymaps 'normal
+     "cc" 'evilnc-comment-or-uncomment-lines))
+#+END_SRC
+* Evil
+** Evil
+#+BEGIN_SRC emacs-lisp
+  (use-package evil
+    :ensure t
+    :config
+    (evil-mode 1)
+    (define-key evil-insert-state-map (kbd "C-k") nil)
+  )
+#+END_SRC
+
+** Nerd Commenter
+#+BEGIN_SRC emacs-lisp
+(use-package evil-nerd-commenter
+  :ensure t
+  :commands (evilnc-comment-or-uncomment-lines))
+#+END_SRC
+
+** Escape
+#+BEGIN_SRC emacs-lisp
+  (use-package evil-escape
+    :ensure t
+    :diminish evil-escape-mode
+    :config
+    (evil-escape-mode))
+    ;; :general
+    ;; (:keymaps 'global
+    ;;           "ESC" 'evil-escape))
+#+END_SRC
+
+** Smartpaerns
+#+BEGIN_SRC emacs-lisp
+  ;; (use-package evil-smartparens
+  ;;   :ensure t
+  ;;   :hook (emacs-lisp-mode . evil-smartparens-mode)
+  ;;   :config
+  ;;   (smartparens-strict-mode))
+#+END_SRC
+* Flycheck
+#+BEGIN_SRC emacs-lisp
+(use-package flycheck
+  :diminish flycheck-mode
+  :ensure t
+  :commands (global-flycheck-mode)
+  :init
+  (setq-default flycheck-disabled-checkers '())
+  (add-hook 'after-init-hook #'global-flycheck-mode)
+
+  )
+#+END_SRC
+
+* Beacon
+#+BEGIN_SRC emacs-lisp
+(use-package beacon
+  :ensure t
+  :diminish beacon-mode
+  :config
+  (beacon-mode 1))
+#+END_SRC
+
+* Ivy
+#+BEGIN_SRC emacs-lisp
+  (use-package ivy
+    :ensure t
+    :diminish ivy-mode
+    :init (ivy-mode 1)
+    :config
+    (setq ivy-count-format "(%d/%d) ")
+
+    (setq ivy-use-virtual-buffers t)
+    (setq ivy-height 20)
+    :general
+    (:keymaps 'ivy-minibuffer-map
+              "C-j" 'ivy-next-line
+              "C-k" 'ivy-previous-line)
+    )
+#+END_SRC
+
+* Counsel
+#+BEGIN_SRC emacs-lisp
+(use-package counsel
+  :ensure t
+  :diminish counsel-mode
+  :commands (counsel-M-x counsel-find-file counsel-recentf)
+  :config
+  (counsel-mode))
+#+END_SRC
+
+* Which-key
+#+BEGIN_SRC emacs-lisp
+(use-package which-key
+  :ensure t
+  :diminish which-key-mode
+  :config
+  (setq which-key-idle-delay 0.3)
+  (which-key-mode))
+#+END_SRC
+
+* Company
+#+BEGIN_SRC emacs-lisp
+  (use-package company
+    :ensure t
+    :diminish company-mode
+    :init
+    (global-company-mode)
+    :general
+    (:keymaps 'company-mode-map
+              "C-j" 'company-select-next
+              "C-k" 'company-select-previous))
+
+#+END_SRC
+
+* Treemacs
+#+BEGIN_SRC emacs-lisp
+  (use-package treemacs
+    :ensure t
+    :commands treemacs-toggle
+    :config
+    (treemacs-follow-mode t))
+
+  (use-package treemacs-evil
+    :ensure t
+    :after treemacs)
+#+END_SRC
+* Org
+#+BEGIN_SRC emacs-lisp
+  (use-package org
+    :ensure t
+    :commands (org-refile org-capture org-todo org-set-property org-set-tags-command)
+    :config
+    (setq org-log-done t)
+    (setq org-refile-use-outline-path t)
+    (setq org-refile-use-outline-path 'file
+        org-outline-path-complete-in-steps nil)
+    (setq org-agenda-files '("~/org/work.org"
+                             "~/org/school.org"
+                             "~/org/home.org"
+                             "~/gtd/inbox.org"
+                             "~/gtd/gtd.org"
+                             "~/gtd/tickler.org"))
+    (setq org-capture-templates '(("t" "Todo [inbox]" entry
+                                   (file+headline "~/gtd/inbox.org" "Tasks")
+                                   "* TODO %i%?")
+                                  ("T" "Tickler" entry
+                                   (file+headline "~/gtd/tickler.org" "Tickler")
+                                   "* %i%? \n %U")))
+    (setq org-refile-targets '(("~/gtd/gtd.org" :maxlevel . 3)
+                               ("~/gtd/someday.org" :level . 1)
+                               ("~/gtd/tickler.org" :maxlevel . 2)))
+    (setq org-todo-keywords '((sequence "TODO(t)" "WAITING(w)" "NEXT(n)" "|" "DONE(d)" "CANCELLED(c)")))
+
+    :general
+    (:states '(normal visual insert motion emacs treemacs)
+     :keymaps  'global-map
+     :prefix "SPC"
+     :non-normal-prefix "C-TAB"
+     "o" '(:ignore t :wk "org")
+     "or" '(org-refile :wk "refile")
+     "oc" '(org-capture :wk "capture")
+     "ot" '(org-todo :wk "todo")
+     "osp" '(org-set-property :wk "set property")
+     "ost" '(counsel-org-tag :wk "set tag")
+    ))
+
+  (use-package org-bullets
+    :ensure t
+    :hook (org-mode . org-bullets-mode))
+
+#+END_SRC
+* Projectile
+#+BEGIN_SRC emacs-lisp
+  (use-package counsel-projectile
+    :ensure t
+    :commands (counsel-projectile-find-file counsel-projectile-switch-project)
+    :config
+    (setq projectile-indexing-method 'alien)
+    :general
+    (:states '(normal visual insert motion emacs treemacs)
+     :keymaps  'global-map
+     :prefix "SPC"
+     :non-normal-prefix "C-TAB"
+     "p" '(:ignore t :wk "project")
+     "pf" '(counsel-projectile-find-file :wk "find file")
+     "p SPC" '(counsel-projectile-switch-project :wk "switch to project"))
+    )
+#+END_SRC
+* Snippets
+#+BEGIN_SRC emacs-lisp
+  (use-package yasnippet
+    :ensure t
+    :hook (prog-mode . yas-minor-mode)
+    :general
+    (:states 'insert
+             :keymaps 'global
+             "M-/" 'yas-expand
+             ))
+
+  (use-package yasnippet-snippets
+    :ensure t
+    :after yasnippet)
+
+
+  (defun attach-yas-backend (bs)
+    "Attach yas backend to each company backend."
+    (cl-loop for x in bs collect (append (list x) '(:with company-yasnippet))))
+
+  (defun local-company ()
+    "Set a local backend for company and yasnippets."
+      (set (make-local-variable 'company-backends) (attach-yas-backend company-backends)))
+
+  (add-hook 'prog-mode-hook 'local-company)
+#+END_SRC
+* Languages
+** Python
+#+BEGIN_SRC emacs-lisp
+   (use-package company-anaconda
+    :ensure t
+    :after (company anaconda-mode)
+    :config
+    (add-to-list 'company-backends 'company-anaconda)
+    )
+
+  (use-package anaconda-mode
+    :ensure t
+    :hook python-mode
+    :hook (python-mode . anaconda-eldoc-mode)
+    :general
+    (:states 'normal
+     :keymaps 'python-mode-map
+     :prefix "SPC"
+     "m" '(:ignore t :wk "python mode")
+     "me" '(:ignore t :wk "enviornment")
+     "mea" '(pythonic-activate :wk "activate enviornment"))
+    )
+#+END_SRC
+** Javascript-jsx
+*** Prettier
+#+BEGIN_SRC emacs-lisp
+  (use-package prettier-js
+    :ensure t
+    :hook (rjsx-mode . prettier-js-mode))
+#+END_SRC
+*** Tern
+#+BEGIN_SRC emacs-lisp
+   (add-to-list 'exec-path "/home/charlie/.npm-global/bin")
+
+
+  ;TODO: Add mode support for all js modes
+  (use-package tern
+    :ensure t
+    ;; :mode ("\\.js" . tern-mode))
+    :hook (rjsx-mode . tern-mode))
+
+  (use-package company-tern
+    :ensure t
+    :after (company tern)
+    :config
+    (add-to-list 'company-backends 'company-tern))
+#+END_SRC
+*** Rjsx
+#+BEGIN_SRC emacs-lisp
+  (use-package rjsx-mode
+    :ensure t
+    :mode ("\\.js" . rjsx-mode)
+    :config
+    )
+#+END_SRC
+
+*** Eslint
+#+BEGIN_SRC emacs-lisp
+  (setq-default flycheck-disabled-checkers
+    (append flycheck-disabled-checkers
+            '(javascript-jshint)))
+
+
+
+#+END_SRC
+* Profiling
+#+BEGIN_SRC emacs-lisp
+  (use-package esup
+    :ensure t
+    :commands esup)
+#+END_SRC
+
+* cleanup
+#+BEGIN_SRC emacs-lisp
+(setq gc-cons-threshold 800000)
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(package-selected-packages
+   (quote
+    (esup yasnippet-snippets yasnippet counsel-projectile spu company-anaconda beacon window-purpose rjsx-mode company-tern anaconda-mode org-bullets evil-smartparens treemacs-evil seq-2\.14 which-key use-package spaceline solarized-theme mode-icons general flycheck evil-nerd-commenter evil-escape diminish counsel company))))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
+#+END_SRC
