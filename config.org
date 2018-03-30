@@ -1,60 +1,9 @@
-* startup
-#+BEGIN_SRC emacs-lisp
-
-
-  (setq gc-cons-threshold 400000000)
-
-  ;;; Begin initialization
-  ;; Turn off mouse interface early in startup to avoid momentary display
-
-  ;; (when window-system
-    (menu-bar-mode -1)
-    (tool-bar-mode -1)
-    (scroll-bar-mode -1)
-  (tooltip-mode -1)
-  ;; )
-
-  (setq inhibit-startup-message t)
-  (setq initial-scratch-message "")
-  (setq package-enable-at-startup nil) ; tells emacs not to load any packages before starting up
-
-  ;;; Set up package
-  (when (>= emacs-major-version 24)
-    (require 'package)
-    (setq package-archives '(("gnu" . "http://elpa.gnu.org/packages/")
-                             ("org"       . "http://orgmode.org/elpa/")
-                             ("melpa"     . "https://melpa.org/packages/")
-                             ("marmalade" . "http://marmalade-repo.org/packages/")
-                           )))
-  (package-initialize) ; guess what this one does ?
-
-  ;;; Bootstrap use-package
-  ;; Install use-package if it's not already installed.
-  ;; use-package is used to configure the rest of the packages.
-  (unless (package-installed-p 'use-package)
-    (package-refresh-contents)
-    (package-install 'use-package))
-
-  ;; From use-package README
-  (eval-when-compile
-    (require 'use-package))
-  (use-package diminish
-               :ensure t)
-#+END_SRC
-
 * Basic Settings
 ** Settings for backup and autosave files
 #+BEGIN_SRC emacs-lisp
-  ;; -*- lexical-binding: t; -*-
   (setq backup-directory-alist
         `((".*" . ,temporary-file-directory)))
-  (setq auto-save-file-name-transforms
-        `((".*" ,temporary-file-directory t)))
-#+END_SRC
-
-** Remove byte compile warnings
-#+BEGIN_SRC emacs-lisp
-(setq byte-compile-warnings '(not nresolved
+  (setq auto-spile-warnings '(not nresolved
                                   free-vars
                                   callargs
                                   redefine
@@ -89,7 +38,8 @@
   (show-paren-mode t)
   (setq show-paren-delay 0.0)
   (setq initial-major-mode 'fundamental-mode)
-
+  (setq-default left-fringe-width  20)
+  (add-hook 'prog-mode-hook 'linum-mode)
 #+END_SRC
 
 * Fonts
@@ -123,13 +73,15 @@
               nil
               t))
 
-  (defun my/tangle-dotfiles ()
+  (defun reload-config ()
      "If the current file is this file, the code blocks are tangled"
-     (when (equal (buffer-file-name) (expand-file-name "~/.emacs.d/init.org"))
-       (org-babel-tangle nil "~/.emacs.d/init.el")
-       (byte-compile-file "~/.emacs.d/init.el")))
+     (interactive)
+     (when (equal (buffer-file-name) (expand-file-name "~/.emacs.d/config.org"))
+       (org-babel-tangle nil "~/.emacs.d/config.el")
+       (byte-compile-file "~/.emacs.d/config.el")
+       (byte-compile-file "~/.emacs.d/init.el")
+       (load-file "~/.emacs.d/init.elc")))
 
-  (add-hook 'after-save-hook #'my/tangle-dotfiles)
 #+END_SRC
 ** Opening a terminal in a tameable way
 #+BEGIN_SRC emacs-lisp
@@ -169,28 +121,21 @@ Tame the term in the bottom of the screen. This requires another function as wel
     :after evil
     :config
     (require 'telephone-line-config)
-    (setq telephone-line-primary-left-separator 'telephone-line-gradient
-    telephone-line-primary-right-separator 'telephone-line-gradient
-    telephone-line-secondary-left-separator 'telephone-line-gradient
-    telephone-line-secondary-right-separator 'telephone-line-gradient)
-    (setq telephone-line-height 24)
+    (setq telephone-line-primary-left-separator 'telephone-line-flat
+          telephone-line-primary-right-separator 'telephone-line-flat)
     (setq telephone-line-lhs
           '((evil   . (telephone-line-evil-tag-segment))
-            (accent . (telephone-line-vc-segment
-                       telephone-line-erc-modified-channels-segment
-                       telephone-line-process-segment))))
-            ;; (nil    . (telephone-line-buffer-segment))))
-    (dolist (x minor-mode-list) (diminish x))
-    (telephone-line-evil-config))
+            (accent . (telephone-line-erc-modified-channels-segment
+                       telephone-line-process-segment))
+            (nil    . (telephone-line-buffer-segment))))
+    (setq telephone-line-rhs
+          '((nil . (telephone-line-vc-segment ))
+            (nil    . (telephone-line-major-mode-segment))))
+    (setq telephone-line-evil-use-short-tag t)
+    (setq telephone-line-height 28)
+    (telephone-line-mode 1))
 #+END_SRC
 
-* Package upgrading
-#+BEGIN_SRC emacs-lisp
-(use-package spu
-  :ensure t
-  :defer 5 ;; defer package loading for 5 second
-  :config (spu-package-upgrade-daily))
-#+END_SRC
 * General Hooks
 #+BEGIN_SRC emacs-lisp
   (add-hook 'emacs-lisp-mode-hook 'remove-elc-on-save)
@@ -198,13 +143,9 @@ Tame the term in the bottom of the screen. This requires another function as wel
 * General.el Config
 General is required above any packages using the :general keyword
 #+BEGIN_SRC emacs-lisp
-  (defun reload-config ()
-    (interactive)
-    (load-file "~/.emacs.d/init.elc"))
-
   (defun edit-config ()
     (interactive)
-    (find-file-at-point "~/.emacs.d/init.org"))
+    (find-file-at-point "~/.emacs.d/config.org"))
 
   (use-package general
     :ensure t
@@ -212,8 +153,7 @@ General is required above any packages using the :general keyword
     (general-define-key
      :states '(normal visual insert motion emacs treemacs)
      :keymaps  'global-map :prefix "SPC"
-     :non-normal-prefix "C-TAB"
-     ;; "SPC" '(:prefix-command my-prefix :wk "prefix")
+     :non-normal-prefix "C-SPC"
 
      ;; M-x
      "SPC" '(counsel-M-x :wk "M-x")
@@ -238,12 +178,12 @@ General is required above any packages using the :general keyword
      "bb" '(ivy-switch-buffer :wk "buffer list")
      "bp" '(previous-buffer :wk "prev buffer")
      "bn" '(next-buffer :wk "next buffer")
+     "bd" '(kill-buffer :wk "kill buffer")
 
 
      "f" '(:ignore t :wk "files")
      "ff" '(counsel-find-file :wk "find file")
      "fr" '(counsel-recentf :wk "find recent file")
-     "ft" '(treemacs-toggle :wk "file tree")
      "fs" '(save-buffer :wk "save file")
      "fe" '(:ignore t :wk "emacs")
      "fer" '(reload-config :wk "reload config")
@@ -383,11 +323,30 @@ General is required above any packages using the :general keyword
     :ensure t
     :commands treemacs-toggle
     :config
-    (treemacs-follow-mode t))
+    (treemacs-follow-mode t)
+    (treemacs-git-mode 'extended)
+
+    :general
+    (:states '(normal visual insert motion emacs treemacs)
+     :keymaps  'global-map :prefix "SPC"
+     :non-normal-prefix "C-SPC"
+     "ft" '(treemacs-toggle :wk "file tree")))
 
   (use-package treemacs-evil
     :ensure t
-    :after treemacs)
+    :after (:any treemacs treemacs-projectile))
+
+  (use-package treemacs-projectile
+    :ensure t
+    :commands treemacs-projectile-toggle
+    :config
+    (setq treemacs-header-function #'treemacs-projectile-create-header)
+    :general
+    (:states '(normal visual insert motion emacs treemacs)
+     :keymaps  'global-map :prefix "SPC"
+     :non-normal-prefix "C-SPC"
+     "pt" '(treemacs-projectile-toggle :wk "file tree")))
+
 #+END_SRC
 * Org
 #+BEGIN_SRC emacs-lisp
@@ -528,7 +487,7 @@ General is required above any packages using the :general keyword
 #+BEGIN_SRC emacs-lisp
   (use-package rjsx-mode
     :ensure t
-    :mode ("\\.js" . rjsx-mode)
+    :mode ("\\.js\'" . rjsx-mode)
     :config
     )
 #+END_SRC
@@ -549,21 +508,21 @@ General is required above any packages using the :general keyword
     :commands esup)
 #+END_SRC
 
-* cleanup
+* git
 #+BEGIN_SRC emacs-lisp
-(setq gc-cons-threshold 800000)
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(package-selected-packages
-   (quote
-    (esup yasnippet-snippets yasnippet counsel-projectile spu company-anaconda beacon window-purpose rjsx-mode company-tern anaconda-mode org-bullets evil-smartparens treemacs-evil seq-2\.14 which-key use-package spaceline solarized-theme mode-icons general flycheck evil-nerd-commenter evil-escape diminish counsel company))))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
+    (use-package git-gutter-fringe
+      :ensure t
+      :hook ((prog-mode text-mode)  . git-gutter-mode)
+      :config
+      (add-hook 'focus-in-hook #'git-gutter:update-all-windows)
+      (fringe-helper-define 'git-gutter-fr:added nil
+        ".XXXXXX."
+        "XX....XX"
+        "X......X"
+        "X......X"
+        "XXXXXXXX"
+        "XXXXXXXX"
+        "X......X"
+        "X......X"))
+
 #+END_SRC
