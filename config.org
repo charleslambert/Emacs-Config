@@ -38,8 +38,9 @@
   (show-paren-mode t)
   (setq show-paren-delay 0.0)
   (setq initial-major-mode 'fundamental-mode)
-  (setq-default left-fringe-width  20)
+  (global-linum-mode)
   (add-hook 'prog-mode-hook 'linum-mode)
+
 #+END_SRC
 
 * Fonts
@@ -63,15 +64,6 @@
     "Byte-compile all your dotfiles."
     (interactive)
     (byte-recompile-directory user-emacs-directory 0))
-
-  (defun remove-elc-on-save ()
-    "If you're saving an elisp file, likely the .elc is no longer valid."
-    (add-hook 'after-save-hook
-              (lambda ()
-                (if (file-exists-p (concat buffer-file-name "c"))
-                    (delete-file (concat buffer-file-name "c"))))
-              nil
-              t))
 
   (defun reload-config ()
      "If the current file is this file, the code blocks are tangled"
@@ -104,14 +96,22 @@
 (setq my-global-keymaps '(normal visual insert motion emacs treemacs))
 #+END_SRC
 * Settings for buffer control
-** Terminal
-Tame the term in the bottom of the screen. This requires another function as well.
 #+BEGIN_SRC emacs-lisp
+  (let ((temp-buff '( "^\\*Compile-Log\\*$"
+                     "^\\*Help\\*$"
+                     "^\\*Flycheck error messages\\*$"
+                     "^\\*Messages\\*$" )))
+    (dolist (buff temp-buff)
+      (add-to-list 'display-buffer-alist
+                   `(,buff
+                     (display-buffer-in-side-window)
+                     (side . bottom)
+                     (window-height . 0.35)))))
+
   (add-to-list 'display-buffer-alist
-               `(,"*terminal*"
-                 (display-buffer-reuse-window
-                  display-buffer-at-bottom)
-                 (window-height   . 0.3)))
+               `(,"^\\*terminal\\*$"
+                 (display-buffer-at-bottom)
+                 (window-height . 0.35)))
 #+END_SRC
 * Modeline
 ** Telephone line
@@ -130,16 +130,12 @@ Tame the term in the bottom of the screen. This requires another function as wel
             (nil    . (telephone-line-buffer-segment))))
     (setq telephone-line-rhs
           '((nil . (telephone-line-vc-segment ))
-            (nil    . (telephone-line-major-mode-segment))))
+            (accent . (telephone-line-major-mode-segment))))
     (setq telephone-line-evil-use-short-tag t)
     (setq telephone-line-height 28)
     (telephone-line-mode 1))
 #+END_SRC
 
-* General Hooks
-#+BEGIN_SRC emacs-lisp
-  (add-hook 'emacs-lisp-mode-hook 'remove-elc-on-save)
-#+END_SRC
 * General.el Config
 General is required above any packages using the :general keyword
 #+BEGIN_SRC emacs-lisp
@@ -159,7 +155,7 @@ General is required above any packages using the :general keyword
      "SPC" '(counsel-M-x :wk "M-x")
 
      ;; Escape minibuffer if I mistakenly hit space
-     "ESC" '(keyboard-escape-quit :wk "escape")
+     ;; "ESC" '(keyboard-escape-quit :wk "escape")
 
      ;; Window Keybindings
      "w" '(:ignore t :wk "windows")
@@ -197,8 +193,6 @@ General is required above any packages using the :general keyword
      "h" '(:ignore t :wk "help")
      "hv" '(counsel-describe-variable :wk "describe variable")
      )
-
-
 
     (general-define-key
      :prefix "g"
@@ -279,18 +273,22 @@ General is required above any packages using the :general keyword
     :general
     (:keymaps 'ivy-minibuffer-map
               "C-j" 'ivy-next-line
-              "C-k" 'ivy-previous-line)
+              "C-k" 'ivy-previous-line
+              "ESC" 'keyboard-escape-quit)
     )
 #+END_SRC
 
 * Counsel
 #+BEGIN_SRC emacs-lisp
-(use-package counsel
-  :ensure t
-  :diminish counsel-mode
-  :commands (counsel-M-x counsel-find-file counsel-recentf)
-  :config
-  (counsel-mode))
+  (use-package counsel
+    :ensure t
+    :diminish counsel-mode
+    :commands (counsel-M-x counsel-find-file counsel-recentf)
+    :config
+    (counsel-mode)
+    :general
+    (:keymaps 'counsel-mode-map
+              "ESC" 'keyboard-escape-quit))
 #+END_SRC
 
 * Which-key
@@ -506,23 +504,4 @@ General is required above any packages using the :general keyword
   (use-package esup
     :ensure t
     :commands esup)
-#+END_SRC
-
-* git
-#+BEGIN_SRC emacs-lisp
-    (use-package git-gutter-fringe
-      :ensure t
-      :hook ((prog-mode text-mode)  . git-gutter-mode)
-      :config
-      (add-hook 'focus-in-hook #'git-gutter:update-all-windows)
-      (fringe-helper-define 'git-gutter-fr:added nil
-        ".XXXXXX."
-        "XX....XX"
-        "X......X"
-        "X......X"
-        "XXXXXXXX"
-        "XXXXXXXX"
-        "X......X"
-        "X......X"))
-
 #+END_SRC

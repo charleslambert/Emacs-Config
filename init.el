@@ -43,11 +43,16 @@
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
+ ;; Your init file should contain only one such instance.d
  ;; If there is more than one, they won't work right.
+ '(git-gutter:update-interval 2)
+ '(git-gutter:added-sign "█")
+ '(git-gutter:deleted-sign "█")
+ '(git-gutter:modified-sign "█")
+ '(global-git-gutter-mode t)
  '(package-selected-packages
    (quote
-    (esup yasnippet-snippets which-key use-package treemacs-projectile treemacs-evil telephone-line solarized-theme rjsx-mode prettier-js org-bullets git-gutter-fringe general flycheck evil-nerd-commenter evil-escape diminish counsel-projectile company-tern company-anaconda beacon))))
+    (esup yasnippet-snippets which-key use-package treemacs-projectile treemacs-evil telephone-line solarized-theme rjsx-mode prettier-js org-bullets general flycheck evil-nerd-commenter evil-escape diminish counsel-projectile company-tern company-anaconda beacon))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
